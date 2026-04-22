@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Translate Selection</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d0d1a;
+      --surface:   #161628;
+      --surface2:  #1e1e36;
+      --border:    #2a2a45;
+      --text:      #e8e8f2;
+      --muted:     #6b7280;
+      --muted2:    #9ca3af;
+      --accent:    #6366f1;
+      --accent-h:  #5254cc;
+      --accent-dim:rgba(99,102,241,0.12);
+      --input-bg:  #1a1a30;
+      --btn-text:  #ffffff;
+      --sw-off:    #2e2e4a;
+      --sw-thumb:  #4b5563;
+      --danger:    #f87171;
+      --success:   #34d399;
+      --shadow:    0 4px 24px rgba(0,0,0,0.5);
+    }
+
+    body.light {
+      --bg:        #f9f9ff;
+      --surface:   #ffffff;
+      --surface2:  #f0f0fa;
+      --border:    #e2e2f0;
+      --text:      #111827;
+      --muted:     #6b7280;
+      --muted2:    #9ca3af;
+      --accent:    #4f46e5;
+      --accent-h:  #4338ca;
+      --accent-dim:rgba(79,70,229,0.08);
+      --input-bg:  #f5f5ff;
+      --btn-text:  #ffffff;
+      --sw-off:    #d1d5db;
+      --sw-thumb:  #9ca3af;
+      --shadow:    0 4px 24px rgba(0,0,0,0.12);
+    }
+
+    body {
+      width: 320px;
+      font-family: 'Segoe UI', 'SF Pro Display', system-ui, sans-serif;
+      font-size: 13px;
+      background: var(--bg);
+      color: var(--text);
+      transition: background 0.2s, color 0.2s;
+    }
+
+    /* ── Header ── */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px 11px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .ext-icon { font-size: 18px; line-height: 1; }
+    .ext-name {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      color: var(--text);
+    }
+    .header-actions { display: flex; align-items: center; gap: 4px; }
+    .icon-btn {
+      width: 28px; height: 28px;
+      border: none; background: transparent;
+      border-radius: 6px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; color: var(--muted);
+      transition: background 0.15s, color 0.15s;
+    }
+    .icon-btn:hover { background: var(--surface2); color: var(--text); }
+
+    /* ── Translate section ── */
+    .section { padding: 12px 14px; border-bottom: 1px solid var(--border); }
+    .lang-bar {
+      display: flex; align-items: center; gap: 6px;
+      margin-bottom: 8px;
+    }
+    .lang-badge {
+      font-size: 10px; font-weight: 600; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--muted);
+      background: var(--surface2); border: 1px solid var(--border);
+      padding: 2px 8px; border-radius: 20px;
+    }
+    .lang-arrow { color: var(--muted); font-size: 12px; }
+    select.lang-select {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+      color: var(--accent); background: var(--accent-dim);
+      border: 1px solid transparent; border-radius: 20px;
+      padding: 3px 20px 3px 8px; cursor: pointer;
+      -webkit-appearance: none; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%236366f1'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 6px center;
+      background-size: 8px;
+      transition: background 0.15s;
+    }
+    select.lang-select:focus { outline: none; }
+
+    .input-wrap { position: relative; margin-bottom: 8px; }
+    textarea#translate-input {
+      width: 100%; min-height: 72px; max-height: 120px;
+      background: var(--input-bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 8px 10px;
+      color: var(--text); font-size: 13px; line-height: 1.5;
+      resize: vertical; font-family: inherit;
+      transition: border-color 0.15s;
+    }
+    textarea#translate-input:focus { outline: none; border-color: var(--accent); }
+    textarea#translate-input::placeholder { color: var(--muted); }
+
+    .btn-row { display: flex; gap: 6px; }
+    button.primary-btn {
+      flex: 1; padding: 7px 12px;
+      background: var(--accent); color: var(--btn-text);
+      border: none; border-radius: 7px; font-size: 12px; font-weight: 600;
+      cursor: pointer; transition: background 0.15s, transform 0.1s;
+      letter-spacing: 0.02em;
+    }
+    button.primary-btn:hover  { background: var(--accent-h); }
+    button.primary-btn:active { transform: scale(0.97); }
+    button.secondary-btn {
+      padding: 7px 10px;
+      background: var(--surface2); color: var(--muted);
+      border: 1px solid var(--border); border-radius: 7px;
+      font-size: 12px; cursor: pointer; transition: background 0.15s, color 0.15s;
+    }
+    button.secondary-btn:hover { background: var(--border); color: var(--text); }
+
+    /* ── Result ── */
+    .result-wrap {
+      margin-top: 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      display: none;
+    }
+    .result-wrap.show { display: block; }
+    .result-text {
+      padding: 9px 10px;
+      font-size: 13px; line-height: 1.6; color: var(--text);
+      white-space: pre-wrap; word-break: break-word;
+      max-height: 160px; overflow-y: auto;
+      scrollbar-width: thin; scrollbar-color: var(--border) transparent;
+    }
+    .result-text::-webkit-scrollbar { width: 3px; }
+    .result-text::-webkit-scrollbar-thumb { background: var(--border); }
+    .result-footer {
+      display: flex; justify-content: flex-end;
+      padding: 4px 8px; border-top: 1px solid var(--border);
+      background: var(--surface);
+    }
+    button.copy-btn {
+      font-size: 11px; color: var(--muted);
+      background: none; border: none; cursor: pointer; padding: 2px 4px;
+      border-radius: 4px; transition: color 0.15s, background 0.15s;
+    }
+    button.copy-btn:hover { color: var(--text); background: var(--surface2); }
+
+    #popup-spinner {
+      display: none; align-items: center; gap: 6px;
+      padding: 10px; color: var(--muted); font-size: 12px;
+    }
+    #popup-spinner.show { display: flex; }
+    .spinner-ring {
+      width: 14px; height: 14px;
+      border: 2px solid var(--border); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Settings ── */
+    .settings-section { padding: 10px 14px 14px; }
+    .settings-title {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--muted);
+      margin-bottom: 10px; padding-bottom: 6px;
+      border-bottom: 1px solid var(--border);
+    }
+    .setting-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 7px 0;
+    }
+    .setting-row + .setting-row { border-top: 1px solid var(--border); }
+    .setting-info { flex: 1; min-width: 0; }
+    .setting-label { font-size: 12px; font-weight: 500; color: var(--text); }
+    .setting-desc  { font-size: 10px; color: var(--muted); margin-top: 1px; }
+
+    /* Toggle switch */
+    .toggle {
+      position: relative; width: 36px; height: 20px; flex-shrink: 0; margin-left: 10px;
+    }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-track {
+      position: absolute; inset: 0;
+      background: var(--sw-off); border-radius: 10px;
+      cursor: pointer; transition: background 0.25s;
+    }
+    .toggle-track::after {
+      content: ''; position: absolute;
+      top: 3px; left: 3px; width: 14px; height: 14px;
+      background: var(--sw-thumb); border-radius: 50%;
+      transition: transform 0.25s, background 0.25s;
+    }
+    .toggle input:checked + .toggle-track { background: rgba(99,102,241,0.4); }
+    .toggle input:checked + .toggle-track::after {
+      transform: translateX(16px); background: var(--accent);
+    }
+
+    /* ── Footer ── */
+    .footer {
+      padding: 6px 14px 10px;
+      font-size: 10px; color: var(--muted);
+      text-align: center;
+      border-top: 1px solid var(--border);
+    }
+    .kbd {
+      display: inline-block; font-size: 9px; font-family: monospace;
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 3px; padding: 1px 4px; color: var(--muted2);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <span class="ext-icon">🌐</span>
+      <span class="ext-name">Translate Selection</span>
+    </div>
+    <div class="header-actions">
+      <button class="icon-btn" id="theme-btn" title="Đổi giao diện">🌙</button>
+    </div>
+  </div>
+
+  <!-- Translate section -->
+  <div class="section">
+    <div class="lang-bar">
+      <span class="lang-badge">AUTO</span>
+      <span class="lang-arrow">→</span>
+      <select class="lang-select" id="lang-select"></select>
+    </div>
+
+    <div class="input-wrap">
+      <textarea id="translate-input" placeholder="Nhập văn bản cần dịch..."></textarea>
+    </div>
+
+    <div class="btn-row">
+      <button class="primary-btn" id="translate-btn">Dịch</button>
+      <button class="secondary-btn" id="clear-btn">✕ Xóa</button>
+    </div>
+
+    <!-- Spinner -->
+    <div id="popup-spinner">
+      <div class="spinner-ring"></div>
+      <span>Đang dịch…</span>
+    </div>
+
+    <!-- Result -->
+    <div class="result-wrap" id="result-wrap">
+      <div class="result-text" id="result-text"></div>
+      <div class="result-footer">
+        <button class="copy-btn" id="copy-btn">📋 Sao chép</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings -->
+  <div class="settings-section">
+    <div class="settings-title">⚙ Cài đặt</div>
+
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-label">Tự động dịch khi chọn chữ</div>
+        <div class="setting-desc">Bôi đen văn bản → popup dịch tự hiện</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="toggle-auto">
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+
+    <div class="setting-row">
+      <div class="setting-info">
+        <div class="setting-label">Hiển thị nút nổi 🌐</div>
+        <div class="setting-desc">Nút có thể kéo, giữ 0.6s để bật/tắt</div>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="toggle-fab">
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <kbd class="kbd">Ctrl+Shift+T</kbd> Dịch chọn &nbsp;·&nbsp;
+    <kbd class="kbd">Ctrl+Shift+D</kbd> Bật/tắt &nbsp;·&nbsp;
+    <kbd class="kbd">Esc</kbd> Đóng
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
