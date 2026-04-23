@@ -290,6 +290,7 @@
     elBadge.textContent = `auto → ${TARGET_LANG}`;
     applyTheme();
     applyState();
+    applyFabVisibility();
 
     // Restore FAB position
     if (data.ts_fab_pos) {
