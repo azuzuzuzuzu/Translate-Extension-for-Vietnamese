@@ -455,7 +455,46 @@
     setLoading();
     showPopup(x, y);
 
+    // First try using the background service worker (bypasses page CORS/CORB)
     try {
+      const bgResp = await new Promise((resolve, reject) => {
+        let settled = false;
+        try {
+          chrome.runtime.sendMessage({ action: 'translate', q: clipped, sl: SOURCE_LANG, tl: TARGET_LANG }, (resp) => {
+            if (settled) return;
+            settled = true;
+            if (chrome.runtime.lastError) return reject(new Error(chrome.runtime.lastError.message));
+            resolve(resp);
+          });
+        } catch (e) {
+          if (settled) return;
+          settled = true;
+          reject(e);
+        }
+        // safety fallback timeout to avoid waiting forever for the service worker
+        setTimeout(() => { if (!settled) { settled = true; reject(new Error('BG_RPC_TIMEOUT')); } }, Math.max(1200, Math.min(3000, CONFIG.REQUEST_TIMEOUT_MS - 200)));
+      });
+
+      if (bgResp && bgResp.ok) {
+        elBadge.textContent = `${bgResp.detectedLang || 'auto'} → ${TARGET_LANG}`;
+        setResult(bgResp.translated);
+        return;
+      } else {
+        console.warn('[Translate] background RPC failed', bgResp && bgResp.error);
+      }
+    } catch (rpcError) {
+      console.warn('[Translate] background RPC error', rpcError);
+      // fallthrough to local fetch fallback
+    }
+
+    // Local fetch fallback with proper timeout/abort handling
+    try {
+      if (abortController) abortController.abort();
+      abortController = new AbortController();
+      const localController = abortController;
+      let timedOut = false;
+      const timeoutId = setTimeout(() => { timedOut = true; try { localController.abort(); } catch (e) {} }, CONFIG.REQUEST_TIMEOUT_MS);
+
       const params = new URLSearchParams({
         client: 'gtx',
         sl: SOURCE_LANG,
@@ -463,37 +502,30 @@
         dt: 't',
         q: clipped
       });
-      
       const url = `${CONFIG.API_BASE}?${params}`;
-      
-      // Create timeout promise for request
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('REQUEST_TIMEOUT')), CONFIG.REQUEST_TIMEOUT_MS)
-      );
-      
-      const fetchPromise = fetch(url, { signal: abortController.signal });
-      const res = await Promise.race([fetchPromise, timeoutPromise]);
-      
+
+      const res = await fetch(url, { signal: localController.signal });
+      clearTimeout(timeoutId);
+
       if (!res.ok) throw new Error(`HTTP_${res.status}`);
       const json = await res.json();
-      
       if (!json[0]) throw new Error('INVALID_RESPONSE');
-      
+
       const translated = json[0].map(p => p[0]).filter(Boolean).join('');
       elBadge.textContent = `${json[2] || 'auto'} → ${TARGET_LANG}`;
       setResult(translated);
     } catch (error) {
       console.error('[Translate]', error);
-      
-      // Provide specific error messages
-      if (error.name === 'AbortError') {
+      if (error && error.name === 'AbortError') {
         setError('Yêu cầu đã bị hủy');
-      } else if (error.message === 'REQUEST_TIMEOUT') {
+      } else if (error && (error.message === 'REQUEST_TIMEOUT' || error.message === 'BG_RPC_TIMEOUT')) {
         setError('Kết nối quá lâu. Thử lại?');
-      } else if (error.message === 'INVALID_RESPONSE') {
+      } else if (error && error.message === 'INVALID_RESPONSE') {
         setError('Phản hồi không hợp lệ');
       } else if (!navigator.onLine) {
         setError('Không có kết nối Internet');
+      } else if (typeof DOMException !== 'undefined' && error instanceof DOMException) {
+        setError('Truy cập dịch vụ bị chặn bởi trang (DOMException).');
       } else {
         setError('Lỗi dịch. Thử lại?');
       }

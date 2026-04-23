@@ -50,3 +50,48 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
     });
   }
 });
+
+/* ─── TRANSLATION RPC ───
+   Service worker performs translate requests so content scripts/popups
+   can avoid CORS/CORB/DOMException issues on certain pages. */
+const TRANSLATE_API = 'https://translate.googleapis.com/translate_a/single';
+const TRANSLATE_TIMEOUT_MS = 8000;
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (!message || message.action !== 'translate') return;
+
+  (async () => {
+    const text = (message.q || '').toString().slice(0, 5000);
+    if (!text) return sendResponse({ ok: false, error: 'EMPTY' });
+
+    const params = new URLSearchParams({
+      client: 'gtx',
+      sl: message.sl || 'auto',
+      tl: message.tl || 'vi',
+      dt: 't',
+      q: text
+    });
+
+    const url = `${TRANSLATE_API}?${params}`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), TRANSLATE_TIMEOUT_MS);
+
+    try {
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+      if (!res || !res.ok) return sendResponse({ ok: false, error: `HTTP_${res ? res.status : '0'}` });
+      const json = await res.json();
+      if (!json || !json[0]) return sendResponse({ ok: false, error: 'INVALID_RESPONSE' });
+      const translated = json[0].map(p => p[0]).filter(Boolean).join('');
+      const detected = json[2] || 'auto';
+      sendResponse({ ok: true, translated, detectedLang: detected });
+    } catch (err) {
+      clearTimeout(timeoutId);
+      const msg = err && (err.message || err.name) ? (err.message || err.name) : String(err);
+      sendResponse({ ok: false, error: msg });
+    }
+  })();
+
+  // Keep the message channel open for async response
+  return true;
+});

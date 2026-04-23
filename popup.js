@@ -207,6 +207,40 @@ async function doTranslate() {
 
   try {
     const clipped = text.slice(0, CONFIG.CHAR_LIMIT);
+
+    // Try background RPC first (service worker has host_permissions)
+    try {
+      const bgResp = await new Promise((resolve, reject) => {
+        let settled = false;
+        try {
+          chrome.runtime.sendMessage({ action: 'translate', q: clipped, sl: CONFIG.SOURCE_LANG, tl: targetLang }, (resp) => {
+            if (settled) return;
+            settled = true;
+            if (chrome.runtime.lastError) return reject(new Error(chrome.runtime.lastError.message));
+            resolve(resp);
+          });
+        } catch (e) {
+          if (settled) return;
+          settled = true;
+          reject(e);
+        }
+        setTimeout(() => { if (!settled) { settled = true; reject(new Error('BG_RPC_TIMEOUT')); } }, 3000);
+      });
+
+      if (bgResp && bgResp.ok) {
+        clearTimeout(timeoutId);
+        hideSpinner();
+        showResult(bgResp.translated);
+        return;
+      } else {
+        console.warn('[Translate] background RPC failed', bgResp && bgResp.error);
+      }
+    } catch (rpcErr) {
+      console.warn('[Translate] background RPC error', rpcErr);
+      // fallback to local fetch
+    }
+
+    // Local fetch fallback
     const params = new URLSearchParams({
       client: 'gtx',
       sl: CONFIG.SOURCE_LANG,
@@ -232,13 +266,15 @@ async function doTranslate() {
     hideSpinner();
 
     // Provide specific error messages
-    if (error.name === 'AbortError') {
+    if (error && error.name === 'AbortError') {
       if (timedOut) showError('Kết nối quá lâu. Vui lòng thử lại.');
       else showError('Yêu cầu đã bị hủy');
-    } else if (error.message === 'INVALID_RESPONSE') {
+    } else if (error && error.message === 'INVALID_RESPONSE') {
       showError('Phản hồi không hợp lệ. Vui lòng thử lại.');
     } else if (!navigator.onLine) {
       showError('Không có kết nối Internet.');
+    } else if (typeof DOMException !== 'undefined' && error instanceof DOMException) {
+      showError('Truy cập dịch vụ bị chặn bởi trang (DOMException). Vui lòng thử lại.');
     } else {
       showError('Lỗi dịch. Vui lòng thử lại.');
     }
