@@ -278,6 +278,7 @@
   const elResize   = document.getElementById('ts-resize');
 
   let lastTranslated = '';
+  let abortController = null;
 
   /* ─── LOAD SETTINGS from chrome.storage ─── */
   chrome.storage.sync.get(['ts_enabled', 'ts_target_lang', 'ts_theme', 'ts_show_fab', 'ts_fab_pos'], (data) => {
