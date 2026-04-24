@@ -20,3 +20,4 @@ All notable changes to this project are documented in this file.
 --
 
 Generated/updated automatically when releasing version 2.4.1.
+imdumb.

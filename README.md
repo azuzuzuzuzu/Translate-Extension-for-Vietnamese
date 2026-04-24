@@ -207,3 +207,5 @@
  ---
  
  Lưu ý: Bản dịch tiếng Việt được tạo với sự hỗ trợ của A.I.
+
+ imdumb.
