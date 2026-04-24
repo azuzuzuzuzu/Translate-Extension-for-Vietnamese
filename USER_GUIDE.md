@@ -14,7 +14,7 @@
  
  - **Popup**: Mở popup, nhập hoặc dán văn bản, chọn ngôn ngữ đích, nhấn `Dịch` hoặc Enter.
  - **Auto-Translate**: Bôi đen văn bản trên trang → popup hiện (nếu bật).
- - **Phím tắt**: `Ctrl+Shift+T` dịch nhanh vùng chọn.
+ - **Phím tắt**: Không có phím tắt mặc định (đã bỏ `Ctrl+Shift+T` để tránh xung đột với Chrome).
  - **FAB**: Nút nổi trên trang để dịch nhanh hoặc bật/tắt auto (giữ 0.6s).
  
  ## Lưu ý về ký tự

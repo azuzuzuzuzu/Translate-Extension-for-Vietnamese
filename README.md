@@ -2,7 +2,7 @@
  
  Một tiện ích mở rộng nhẹ, nhanh giúp dịch đoạn văn bản được bôi đen trên trang web. Hỗ trợ 10+ ngôn ngữ thông qua Google Translate API (không chính thức).
  
- ![Version](https://img.shields.io/badge/version-2.1.0-blue)
+ ![Version](https://img.shields.io/badge/version-2.4.1-blue)
  ![License](https://img.shields.io/badge/license-MIT-green)
  ![Chrome](https://img.shields.io/badge/chrome-MV3-green)
  
@@ -13,7 +13,7 @@
  - 🌐 Nhiều chế độ dịch:
    - Tự động dịch khi bôi đen văn bản
    - Dịch thủ công qua popup
-   - Phím tắt: Ctrl+Shift+T
+   - Không có phím tắt dịch nhanh mặc định (đã bỏ `Ctrl+Shift+T`)
    - Nút FAB nổi trên trang
  
  - 🎨 Giao diện thân thiện:
@@ -64,7 +64,8 @@
  - **README (Tiếng Việt):** [README.md](README.md) - Bản tiếng Việt (tệp hiện tại)
  - **User Guide (Tiếng Việt):** [USER_GUIDE.md](USER_GUIDE.md)
  - **Hướng dẫn dev (Tiếng Việt):** [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md)
- - **Ghi chú thay đổi (Tiếng Việt):** [IMPROVEMENTS.md](IMPROVEMENTS.md)
+ - **Ghi chú thay đổi (Tiếng Việt):** [CHANGELOG.md](CHANGELOG.md) — tóm tắt phiên bản
+ - [IMPROVEMENTS.md](IMPROVEMENTS.md)
  
  ---
  
@@ -89,7 +90,7 @@
  
  1) Tự động dịch: bôi đen → popup xuất hiện (nếu bật)
  2) Popup: mở popup, nhập văn bản, chọn ngôn ngữ, nhấn Dịch
- 3) Phím tắt: `Ctrl+Shift+T` để dịch nhanh vùng chọn
+ 3) Phím tắt: Không có phím tắt dịch nhanh mặc định (Ctrl+Shift+D để bật/tắt)
  4) FAB button: nút nổi trên trang để dịch nhanh
  
  ---
@@ -160,7 +161,17 @@
  
  ## 🚀 Lịch sử phiên bản
  
- ### 2.1.0 (2026-04-22)
+ ### 2.4.1 (2026-04-24)
+ - Xóa phím tắt `Ctrl+Shift+T` để tránh xung đột với Chrome.
+ 
+ ### 2.4.0 (2026-04-24)
+ - Thêm nút dịch nổi cạnh con trỏ: hiện khi bôi đen, bấm mới dịch (giống icon Google trong ví dụ người dùng).
+ - Sửa lỗi: tránh hiển thị nhiều nút chồng chéo; giữ vùng chọn khi bấm nút.
+ - Cập nhật vị trí nút (phía phải, phía trên con trỏ) và timeout hiển thị nút (6s).
+ - Bump `manifest.json` version → `2.4.0`.
+ - Tinh chỉnh UX cho drag/resize và theme.
+
+### 2.1.0 (2026-04-22)
  - Cải thiện xử lý lỗi
  - Hỗ trợ timeout (8s)
  - Debounce input trong popup

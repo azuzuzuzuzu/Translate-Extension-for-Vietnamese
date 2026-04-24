@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Translate Selection",
-  "version": "2.1.0",
+  "version": "2.4.1",
   "description": "Dịch văn bản được chọn trên bất kỳ trang web nào. Hỗ trợ kéo cửa sổ, dark/light mode.",
   "permissions": ["storage", "activeTab"],
   "host_permissions": [
@@ -16,7 +16,7 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Translate Selection\n\n⌨ Ctrl+Shift+T: Dịch nhanh",
+    "default_title": "Translate Selection",
     "default_icon": {
       "16":  "icons/icon16.png",
       "48":  "icons/icon48.png",

@@ -223,6 +223,25 @@
       box-shadow: 0 4px 16px rgba(0,0,0,0.3);
     }
     #ts-toast.show { opacity: 1; transform: translateY(0); }
+    
+      /* ── SELECT BUTTON ── */
+      #ts-select-btn {
+        position: fixed;
+        z-index: ${CONFIG.Z_INDEX_FAB};
+        width: 40px; height: 40px; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        background: var(--ts-accent); color: white; border: none;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+        cursor: pointer; transition: transform 0.12s ease, opacity 0.12s ease;
+        opacity: 0; transform: scale(0.9);
+        pointer-events: none;
+        font-size: 18px;
+      }
+      #ts-select-btn.show {
+        opacity: 1; transform: scale(1); pointer-events: auto;
+      }
+      #ts-select-btn:active { transform: scale(0.95); }
+      #ts-select-btn.ts-light { background: var(--ts-accent); color: white; }
   `;
   document.head.appendChild(style);
 
@@ -261,6 +280,13 @@
   `;
   document.body.appendChild(fabWrap);
 
+  /* ─── SELECT BUTTON DOM ─── */
+  const selectBtn = document.createElement('button');
+  selectBtn.id = 'ts-select-btn';
+  selectBtn.title = 'Dịch đoạn đã chọn';
+  selectBtn.innerHTML = '🌐';
+  document.body.appendChild(selectBtn);
+
   const toast = document.createElement('div');
   toast.id = 'ts-toast';
   document.body.appendChild(toast);
@@ -279,6 +305,53 @@
 
   let lastTranslated = '';
   let abortController = null;
+  // Selection-button state
+  let currentSelectedText = '';
+  let currentSelectionXY = { x: 0, y: 0 };
+  let selectBtnTimeout = null;
+
+  // Selection button interactions
+  selectBtn.addEventListener('mousedown', (ev) => { ev.stopPropagation(); ev.preventDefault(); });
+  selectBtn.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    // Re-check live selection first (safer if browser cleared selection on click)
+    let selText = '';
+    try { const sel = window.getSelection(); selText = sel ? sel.toString().trim() : ''; } catch(e) { selText = ''; }
+    const text = selText && selText.length >= CONFIG.MIN_SELECTION_LENGTH ? selText : currentSelectedText;
+    const pos = { x: currentSelectionXY.x, y: currentSelectionXY.y };
+    if (!enabled) { showToast('⚠ Tự động dịch đang tắt — giữ nút để bật'); return; }
+    if (!text || text.length < CONFIG.MIN_SELECTION_LENGTH) { showToast('Hãy chọn chữ trước'); hideSelectButton(); return; }
+    hideSelectButton();
+    translate(text, pos.x, pos.y);
+  });
+
+  document.addEventListener('mousedown', (ev) => {
+    if (!selectBtn) return;
+    if (selectBtn.contains(ev.target) || popup.contains(ev.target) || fabWrap.contains(ev.target)) return;
+    hideSelectButton();
+  });
+
+  function showSelectButton(text, x, y) {
+    currentSelectedText = text;
+    currentSelectionXY = { x: x, y: y };
+    // clamp inside viewport and offset to the right/above cursor
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const bx = Math.min(Math.max(8, x + 12), vw - 48);
+    const by = Math.min(Math.max(8, y - 44), vh - 48);
+    selectBtn.style.left = bx + 'px';
+    selectBtn.style.top  = by + 'px';
+    selectBtn.classList.add('show');
+    selectBtn.classList.toggle('ts-light', theme === 'light');
+    if (selectBtnTimeout) clearTimeout(selectBtnTimeout);
+    selectBtnTimeout = setTimeout(hideSelectButton, 6000);
+  }
+
+  function hideSelectButton() {
+    try { selectBtn.classList.remove('show'); } catch(e){}
+    currentSelectedText = '';
+    currentSelectionXY = { x: 0, y: 0 };
+    if (selectBtnTimeout) { clearTimeout(selectBtnTimeout); selectBtnTimeout = null; }
+  }
 
   /* ─── LOAD SETTINGS from chrome.storage ─── */
   chrome.storage.sync.get(['ts_enabled', 'ts_target_lang', 'ts_theme', 'ts_show_fab', 'ts_fab_pos'], (data) => {
@@ -313,7 +386,7 @@
   /* ─── THEME ─── */
   function applyTheme() {
     const light = theme === 'light';
-    [popup, fabWrap, toast].forEach(el => el.classList.toggle('ts-light', light));
+    [popup, fabWrap, toast, selectBtn].forEach(el => el.classList.toggle('ts-light', light));
   }
 
   /* ─── STATE ─── */
@@ -574,33 +647,25 @@
   /* ─── AUTO TRIGGER ─── */
   document.addEventListener('mouseup', (e) => {
     if (!enabled) return;
-    if (popup.contains(e.target) || fabWrap.contains(e.target)) return;
+    if (popup.contains(e.target) || fabWrap.contains(e.target) || (selectBtn && selectBtn.contains(e.target))) return;
     if (fabMoved) return;
     setTimeout(() => {
       const sel  = window.getSelection();
       const text = sel ? sel.toString().trim() : '';
-      if (text.length > CONFIG.MIN_SELECTION_LENGTH) translate(text, e.clientX, e.clientY);
-      else if (!text) hidePopup();
+      if (text.length > CONFIG.MIN_SELECTION_LENGTH) {
+        // Position the button at the mouse release point (to the right and above the cursor)
+        showSelectButton(text, e.clientX, e.clientY);
+      } else if (!text) {
+        hidePopup();
+        hideSelectButton();
+      }
     }, CONFIG.AUTO_TRIGGER_DELAY_MS);
   });
 
   /* ─── KEYBOARD ─── */
   document.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.shiftKey && e.key === 'T') {
-      e.preventDefault();
-      const sel = window.getSelection();
-      const text = sel ? sel.toString().trim() : '';
-      if (!text) {
-        showToast('Hãy chọn chữ trước');
-        return;
-      }
-      if (text.length < CONFIG.MIN_SELECTION_LENGTH) {
-        showToast(`Cần ít nhất ${CONFIG.MIN_SELECTION_LENGTH} ký tự`);
-        return;
-      }
-      const rect = sel.getRangeAt(0).getBoundingClientRect();
-      translate(text, rect.right, rect.bottom);
-    }
+    // Removed Ctrl+Shift+T shortcut due to Chrome shortcut conflicts.
+    // Keep Ctrl+Shift+D to toggle auto-translate and Esc to close popup.
     if (e.ctrlKey && e.shiftKey && e.key === 'D') { e.preventDefault(); toggleEnabled(); }
     if (e.key === 'Escape') hidePopup();
   });
